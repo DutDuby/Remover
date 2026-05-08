@@ -1,1 +1,476 @@
-const imageUpload=document.getElementById("image-upload"),backgroundUpload=document.getElementById("background-upload"),originalImage=document.getElementById("original-image"),processedImage=document.getElementById("processed-image"),downloadButton=document.getElementById("download-button"),loadingSpinner=document.getElementById("loading-spinner"),errorMessage=document.getElementById("error-message"),themeToggleBtn=document.getElementById("theme-toggle-btn"),brightnessSlider=document.getElementById("brightness"),contrastSlider=document.getElementById("contrast"),saturationSlider=document.getElementById("saturation"),rotateSlider=document.getElementById("rotate"),blurSlider=document.getElementById("blur"),resetEnhancementBtn=document.getElementById("reset-enhancement"),copyCodeButton=document.getElementById("copy-code-button"),applyTextButton=document.getElementById("apply-text-button"),overlayTextInput=document.getElementById("overlay-text"),textSizeInput=document.getElementById("text-size"),textColorInput=document.getElementById("text-color"),textFontInput=document.getElementById("text-font"),textStyleInput=document.getElementById("text-style"),textOverlay=document.getElementById("text-overlay"),resetTextButton=document.getElementById("reset-text-button"),moveUpBtn=document.getElementById("move-up"),moveDownBtn=document.getElementById("move-down"),moveLeftBtn=document.getElementById("move-left"),moveRightBtn=document.getElementById("move-right");let textX=50,textY=50;const moveStep=5;let processedImageBlob=null;function initTheme(){let e=localStorage.getItem("theme")||"light";document.documentElement.setAttribute("data-theme",e)}function updateImageEnhancements(){let e=brightnessSlider.value,t=contrastSlider.value,a=saturationSlider.value,n=rotateSlider.value,l=blurSlider.value;processedImage.style.filter=`brightness(${e}%) contrast(${t}%) saturate(${a}%) blur(${l}px)`,processedImage.style.transform=`rotate(${n}deg)`}function resetEnhancements(){brightnessSlider.value=100,contrastSlider.value=100,saturationSlider.value=100,rotateSlider.value=0,blurSlider.value=0,updateImageEnhancements()}function updateTextPosition(){textOverlay.style.left=textX+"px",textOverlay.style.top=textY+"px"}function resetTextControls(){overlayTextInput.value="",textSizeInput.value=24,textColorInput.value="#000000",textFontInput.value="Arial",textStyleInput.value="normal",textOverlay.textContent="",textOverlay.style="",textX=50,textY=50,updateTextPosition()}function setupDragAndDrop(e,t){e.addEventListener("dragover",t=>{t.preventDefault(),t.stopPropagation(),e.style.background="rgba(255, 255, 255, 0.2)",e.style.borderColor="rgba(255, 255, 255, 0.8)"}),e.addEventListener("dragleave",t=>{t.preventDefault(),t.stopPropagation(),e.style.background="rgba(255, 255, 255, 0.1)",e.style.borderColor="rgba(255, 255, 255, 0.3)"}),e.addEventListener("drop",a=>{a.preventDefault(),a.stopPropagation(),e.style.background="rgba(255, 255, 255, 0.1)",e.style.borderColor="rgba(255, 255, 255, 0.3)";let n=a.dataTransfer.files[0];n&&n.type.startsWith("image/")&&(t.files=a.dataTransfer.files,handleFileSelect(n,"image-upload"===t.id))})}function handleFileSelect(e,t){if(e&&e.type.startsWith("image/")){let a=new FileReader;a.onload=a=>{t?(originalImage.src=a.target.result,removeBackground(e),resetEnhancements(),resetTextControls()):processedImageBlob&&(applyCustomBackground(processedImageBlob,a.target.result),resetEnhancements(),resetTextControls())},a.readAsDataURL(e)}}async function removeBackground(e){let t=new FormData;t.append("image_file",e),t.append("size","auto"),loadingSpinner.style.display="block",errorMessage.style.display="none";try{let a=await fetch("https://api.remove.bg/v1.0/removebg",{method:"POST",headers:{"X-Api-Key":"N2ak6GE594k45fMi2g51D9Tf"},body:t});if(!a.ok){let n=await a.text();throw Error(`Failed: ${a.status} - ${n}`)}let l=await a.blob();processedImageBlob=l,processedImage.src=URL.createObjectURL(l),downloadButton.disabled=!1}catch(r){errorMessage.textContent="Error: "+r.message,errorMessage.style.display="block"}finally{loadingSpinner.style.display="none"}}function applyCustomBackground(e,t){let a=document.createElement("canvas"),n=a.getContext("2d"),l=new Image;l.src=URL.createObjectURL(e);let r=new Image;r.src=t,Promise.all([new Promise(e=>l.onload=e),new Promise(e=>r.onload=e)]).then(()=>{a.width=l.width,a.height=l.height,n.drawImage(r,0,0,a.width,a.height),n.drawImage(l,0,0),processedImage.src=a.toDataURL()})}function getImageShareURL(){return processedImage.src&&"#"!==processedImage.src?processedImage.src:(alert("Please process an image before sharing!"),null)}themeToggleBtn.addEventListener("click",()=>{let e=document.documentElement.getAttribute("data-theme"),t="light"===e?"dark":"light";document.documentElement.setAttribute("data-theme",t),localStorage.setItem("theme",t)}),initTheme(),brightnessSlider.addEventListener("input",updateImageEnhancements),contrastSlider.addEventListener("input",updateImageEnhancements),saturationSlider.addEventListener("input",updateImageEnhancements),rotateSlider.addEventListener("input",updateImageEnhancements),blurSlider.addEventListener("input",updateImageEnhancements),resetEnhancementBtn.addEventListener("click",resetEnhancements),resetTextButton.addEventListener("click",resetTextControls),moveUpBtn.addEventListener("click",()=>{textY-=5,updateTextPosition()}),moveDownBtn.addEventListener("click",()=>{textY+=5,updateTextPosition()}),moveLeftBtn.addEventListener("click",()=>{textX-=5,updateTextPosition()}),moveRightBtn.addEventListener("click",()=>{textX+=5,updateTextPosition()}),document.querySelectorAll(".upload-box").forEach(e=>{let t=e.querySelector('input[type="file"]');e.addEventListener("click",()=>t.click())}),setupDragAndDrop(document.querySelector(".upload-box:not(.background-upload)"),imageUpload),setupDragAndDrop(document.querySelector(".background-upload"),backgroundUpload),imageUpload.addEventListener("change",e=>handleFileSelect(e.target.files[0],!0)),backgroundUpload.addEventListener("change",e=>handleFileSelect(e.target.files[0],!1)),applyTextButton.addEventListener("click",()=>{textOverlay.textContent=overlayTextInput.value||"",textOverlay.style.fontSize=`${textSizeInput.value||24}px`,textOverlay.style.color=textColorInput.value||"#000000",textOverlay.style.fontFamily=textFontInput.value;let e=textStyleInput.value;textOverlay.style.fontWeight=e.includes("bold")?"bold":"normal",textOverlay.style.fontStyle=e.includes("italic")?"italic":"normal",updateTextPosition()}),copyCodeButton.addEventListener("click",()=>{if(!processedImage.src||"#"===processedImage.src){alert("No processed image available to copy!");return}navigator.clipboard.writeText(processedImage.src).then(()=>{copyCodeButton.textContent="Copied!",setTimeout(()=>{copyCodeButton.textContent="Copy Image as Code"},2e3)}).catch(e=>alert("Failed to copy: "+e))}),downloadButton.addEventListener("click",()=>{let e=document.getElementById("download-format").value,t=parseInt(document.getElementById("download-resolution").value)||1,a=document.createElement("canvas"),n=a.getContext("2d"),l=new Image;l.src=processedImage.src,l.onload=()=>{a.width=l.width*t,a.height=l.height*t,n.scale(t,t),n.filter=processedImage.style.filter;let r=parseInt(rotateSlider.value)||0;if(n.translate(a.width/(2*t),a.height/(2*t)),n.rotate(r*Math.PI/180),n.drawImage(l,-l.width/2,-l.height/2),n.rotate(-(r*Math.PI)/180),n.translate(-a.width/(2*t),-a.height/(2*t)),""!==textOverlay.textContent.trim()){let o=textStyleInput.value,i=o.includes("bold")?"bold ":"",d=o.includes("italic")?"italic ":"";n.font=`${d}${i}${textSizeInput.value||24}px ${textFontInput.value}`,n.fillStyle=textColorInput.value,n.fillText(textOverlay.textContent,textX,textY)}let s="image/png",c="png";"jpg"===e&&(s="image/jpeg",c="jpg"),"webp"===e&&(s="image/webp",c="webp");let g=document.createElement("a");g.href=a.toDataURL(s,.95),g.download=`Background Dropper-${t}x.${c}`,g.click()}}),document.getElementById("share-facebook").addEventListener("click",()=>{let e=getImageShareURL();if(e){let t=`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(e)}`;window.open(t,"_blank")}}),document.getElementById("share-twitter").addEventListener("click",()=>{let e=getImageShareURL();if(e){let t=`https://twitter.com/intent/tweet?url=${encodeURIComponent(e)}&text=Check out my edited image!`;window.open(t,"_blank")}}),document.getElementById("share-linkedin").addEventListener("click",()=>{let e=getImageShareURL();if(e){let t=`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(e)}`;window.open(t,"_blank")}}),document.getElementById("share-whatsapp").addEventListener("click",()=>{let e=getImageShareURL();if(e){let t=`https://api.whatsapp.com/send?text=Check out my edited image! ${encodeURIComponent(e)}`;window.open(t,"_blank")}}),document.querySelectorAll(".stock-item").forEach(e=>{e.addEventListener("click",()=>{processedImageBlob?(applyCustomBackground(processedImageBlob,e.src),resetEnhancements(),resetTextControls()):alert("Please upload and process an image first!")})}),document.querySelectorAll(".dynamic-item").forEach(e=>{e.addEventListener("click",()=>{if(!processedImageBlob){alert("Please upload and process an image first!");return}let t=document.createElement("canvas"),a=t.getContext("2d"),n=new Image;n.src=URL.createObjectURL(processedImageBlob),n.onload=()=>{t.width=n.width,t.height=n.height;let l=e.dataset.bg;if("gradient"===l){let r=a.createLinearGradient(0,0,t.width,t.height);r.addColorStop(0,"#4f46e5"),r.addColorStop(1,"#3b82f6"),a.fillStyle=r,a.fillRect(0,0,t.width,t.height)}else if("moving"===l){a.fillStyle="black",a.fillRect(0,0,t.width,t.height);for(let o=0;o<200;o++)a.fillStyle=`rgba(255,255,255,${Math.random()})`,a.beginPath(),a.arc(Math.random()*t.width,Math.random()*t.height,2*Math.random(),0,2*Math.PI),a.fill()}else if("pattern"===l){a.fillStyle="#f4f4f4",a.fillRect(0,0,t.width,t.height),a.strokeStyle="#ccc";for(let i=0;i<t.width;i+=40)for(let d=0;d<t.height;d+=40)a.strokeRect(i,d,40,40)}a.drawImage(n,0,0),processedImage.src=t.toDataURL()}})});const bulkUploadInput=document.getElementById("bulk-upload-input"),bulkPreview=document.getElementById("bulk-preview");async function removeBackgroundBulk(e){let t=new FormData;t.append("image_file",e),t.append("size","auto");let a=await fetch("https://api.remove.bg/v1.0/removebg",{method:"POST",headers:{"X-Api-Key":"UtFqhDxJ45LksJC5RFuAeGtX"},body:t});if(!a.ok){let n=await a.text();throw Error(`Failed: ${a.status} - ${n}`)}return await a.blob()}bulkUploadInput.addEventListener("change",async e=>{let t=Array.from(e.target.files);for(let a of(bulkPreview.innerHTML="",t)){if(!a.type.startsWith("image/"))continue;let n=document.createElement("div");n.className="bulk-item",n.innerHTML=`<p>${a.name}</p><p>Processing...</p>`,bulkPreview.appendChild(n);try{let l=await removeBackgroundBulk(a),r=document.createElement("img");r.src=URL.createObjectURL(l),n.innerHTML=`<p>${a.name}</p>`,n.appendChild(r);let o=document.createElement("button");o.textContent="Download",o.addEventListener("click",()=>{let e=document.createElement("a");e.href=r.src,e.download=`processed-${a.name}`,e.click()}),n.appendChild(o)}catch(i){n.innerHTML=`<p>${a.name}</p><p style="color:red;">Error: ${i.message}</p>`}}});
+// ---------------- ELEMENTS ----------------
+const imageUpload = document.getElementById('image-upload');
+const backgroundUpload = document.getElementById('background-upload');
+const originalImage = document.getElementById('original-image');
+const processedImage = document.getElementById('processed-image');
+const downloadButton = document.getElementById('download-button');
+const loadingSpinner = document.getElementById('loading-spinner');
+const errorMessage = document.getElementById('error-message');
+const themeToggleBtn = document.getElementById('theme-toggle-btn');
+const brightnessSlider = document.getElementById('brightness');
+const contrastSlider = document.getElementById('contrast');
+const saturationSlider = document.getElementById('saturation');
+const rotateSlider = document.getElementById('rotate'); 
+const blurSlider = document.getElementById('blur'); // ✅ blur control
+const resetEnhancementBtn = document.getElementById('reset-enhancement');
+const copyCodeButton = document.getElementById('copy-code-button');
+
+// --- Text overlay controls ---
+const applyTextButton = document.getElementById('apply-text-button');
+const overlayTextInput = document.getElementById('overlay-text');
+const textSizeInput = document.getElementById('text-size');
+const textColorInput = document.getElementById('text-color');
+const textFontInput = document.getElementById('text-font');
+const textStyleInput = document.getElementById('text-style');
+const textOverlay = document.getElementById('text-overlay');
+const resetTextButton = document.getElementById('reset-text-button'); 
+
+// --- Text move buttons ---
+const moveUpBtn = document.getElementById('move-up');
+const moveDownBtn = document.getElementById('move-down');
+const moveLeftBtn = document.getElementById('move-left');
+const moveRightBtn = document.getElementById('move-right');
+
+let textX = 50;
+let textY = 50;
+const moveStep = 5; // how much text moves per click
+
+let processedImageBlob = null;
+
+// ---------------- THEME TOGGLE ----------------
+function initTheme() {
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+}
+themeToggleBtn.addEventListener('click', () => {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+});
+initTheme();
+
+// ---------------- IMAGE ENHANCEMENTS ----------------
+function updateImageEnhancements() {
+  const brightness = brightnessSlider.value;
+  const contrast = contrastSlider.value;
+  const saturation = saturationSlider.value;
+  const rotate = rotateSlider.value;
+  const blur = blurSlider.value;
+
+  processedImage.style.filter =
+    `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) blur(${blur}px)`;
+
+  processedImage.style.transform = `rotate(${rotate}deg)`; 
+}
+
+function resetEnhancements() {
+  brightnessSlider.value = 100;
+  contrastSlider.value = 100;
+  saturationSlider.value = 100;
+  rotateSlider.value = 0;
+  blurSlider.value = 0;
+  updateImageEnhancements();
+}
+
+brightnessSlider.addEventListener('input', updateImageEnhancements);
+contrastSlider.addEventListener('input', updateImageEnhancements);
+saturationSlider.addEventListener('input', updateImageEnhancements);
+rotateSlider.addEventListener('input', updateImageEnhancements);
+blurSlider.addEventListener('input', updateImageEnhancements);
+resetEnhancementBtn.addEventListener('click', resetEnhancements);
+
+// ---------------- TEXT CONTROLS ----------------
+function updateTextPosition() {
+  textOverlay.style.left = textX + "px";
+  textOverlay.style.top = textY + "px";
+}
+
+function resetTextControls() {
+  overlayTextInput.value = "";
+  textSizeInput.value = 24;
+  textColorInput.value = "#000000";
+  textFontInput.value = "Arial";
+  textStyleInput.value = "normal";
+  textOverlay.textContent = ""; 
+  textOverlay.style = ""; 
+  textX = 50;
+  textY = 50;
+  updateTextPosition();
+}
+resetTextButton.addEventListener('click', resetTextControls);
+
+// Movement button logic
+moveUpBtn.addEventListener("click", () => {
+  textY -= moveStep;
+  updateTextPosition();
+});
+moveDownBtn.addEventListener("click", () => {
+  textY += moveStep;
+  updateTextPosition();
+});
+moveLeftBtn.addEventListener("click", () => {
+  textX -= moveStep;
+  updateTextPosition();
+});
+moveRightBtn.addEventListener("click", () => {
+  textX += moveStep;
+  updateTextPosition();
+});
+
+// ---------------- FILE UPLOAD ----------------
+document.querySelectorAll('.upload-box').forEach(box => {
+  const input = box.querySelector('input[type="file"]');
+  box.addEventListener('click', () => input.click());
+});
+
+// Drag and drop setup
+function setupDragAndDrop(uploadBox, fileInput) {
+  uploadBox.addEventListener('dragover', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    uploadBox.style.background = 'rgba(255, 255, 255, 0.2)';
+    uploadBox.style.borderColor = 'rgba(255, 255, 255, 0.8)';
+  });
+  uploadBox.addEventListener('dragleave', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    uploadBox.style.background = 'rgba(255, 255, 255, 0.1)';
+    uploadBox.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+  });
+  uploadBox.addEventListener('drop', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    uploadBox.style.background = 'rgba(255, 255, 255, 0.1)';
+    uploadBox.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      fileInput.files = e.dataTransfer.files;
+      handleFileSelect(file, fileInput.id === 'image-upload');
+    }
+  });
+}
+setupDragAndDrop(document.querySelector('.upload-box:not(.background-upload)'), imageUpload);
+setupDragAndDrop(document.querySelector('.background-upload'), backgroundUpload);
+
+// Handle file selection
+function handleFileSelect(file, isMainImage) {
+  if (file && file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (isMainImage) {
+        originalImage.src = e.target.result;
+        removeBackground(file);
+        resetEnhancements();
+        resetTextControls();
+      } else if (processedImageBlob) {
+        applyCustomBackground(processedImageBlob, e.target.result);
+        resetEnhancements();
+        resetTextControls();
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+}
+imageUpload.addEventListener('change', (event) =>
+  handleFileSelect(event.target.files[0], true));
+backgroundUpload.addEventListener('change', (event) =>
+  handleFileSelect(event.target.files[0], false));
+
+// ---------------- REMOVE BACKGROUND ----------------
+async function removeBackground(imageFile) {
+  const apiKey = 'N2ak6GE594k45fMi2g51D9Tf'; // ✅ API key
+  const url = 'https://api.remove.bg/v1.0/removebg';
+  const formData = new FormData();
+  formData.append('image_file', imageFile);
+  formData.append('size', 'auto');
+  loadingSpinner.style.display = 'block';
+  errorMessage.style.display = 'none';
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'X-Api-Key': apiKey },
+      body: formData
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed: ${response.status} - ${errorText}`);
+    }
+    const blob = await response.blob();
+    processedImageBlob = blob;
+    processedImage.src = URL.createObjectURL(blob);
+    downloadButton.disabled = false;
+  } catch (error) {
+    errorMessage.textContent = 'Error: ' + error.message;
+    errorMessage.style.display = 'block';
+  } finally {
+    loadingSpinner.style.display = 'none';
+  }
+}
+
+// ---------------- APPLY CUSTOM BACKGROUND ----------------
+function applyCustomBackground(foregroundBlob, backgroundUrl) {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const foregroundImage = new Image();
+  foregroundImage.src = URL.createObjectURL(foregroundBlob);
+  const backgroundImage = new Image();
+  backgroundImage.src = backgroundUrl;
+  Promise.all([
+    new Promise(resolve => foregroundImage.onload = resolve),
+    new Promise(resolve => backgroundImage.onload = resolve)
+  ]).then(() => {
+    canvas.width = foregroundImage.width;
+    canvas.height = foregroundImage.height;
+    ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(foregroundImage, 0, 0);
+    processedImage.src = canvas.toDataURL();
+  });
+}
+
+// ---------------- APPLY TEXT OVERLAY ----------------
+applyTextButton.addEventListener('click', () => {
+  textOverlay.textContent = overlayTextInput.value || "";
+  textOverlay.style.fontSize = `${textSizeInput.value || 24}px`;
+  textOverlay.style.color = textColorInput.value || "#000000";
+  textOverlay.style.fontFamily = textFontInput.value;
+
+  const style = textStyleInput.value;
+  textOverlay.style.fontWeight = style.includes("bold") ? "bold" : "normal";
+  textOverlay.style.fontStyle = style.includes("italic") ? "italic" : "normal";
+
+  updateTextPosition();
+});
+
+// ---------------- COPY AS CODE ----------------
+copyCodeButton.addEventListener('click', () => {
+  if (!processedImage.src || processedImage.src === "#") {
+    alert("No processed image available to copy!");
+    return;
+  }
+  navigator.clipboard.writeText(processedImage.src)
+    .then(() => {
+      copyCodeButton.textContent = "Copied!";
+      setTimeout(() => {
+        copyCodeButton.textContent = "Copy Image as Code";
+      }, 2000);
+    })
+    .catch(err => alert("Failed to copy: " + err));
+});
+
+// ---------------- DOWNLOAD IMAGE (formats + resolution) ----------------
+downloadButton.addEventListener('click', () => {
+  const format = document.getElementById('download-format').value;
+  const scale = parseInt(document.getElementById('download-resolution').value) || 1;
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const tempImage = new Image();
+  tempImage.src = processedImage.src;
+
+  tempImage.onload = () => {
+    // Apply scaling
+    canvas.width = tempImage.width * scale;
+    canvas.height = tempImage.height * scale;
+    ctx.scale(scale, scale);
+
+    // Apply filters
+    ctx.filter = processedImage.style.filter;
+
+    // Apply rotation
+    const rotate = parseInt(rotateSlider.value) || 0;
+    ctx.translate(canvas.width / (2 * scale), canvas.height / (2 * scale));
+    ctx.rotate((rotate * Math.PI) / 180);
+    ctx.drawImage(tempImage, -tempImage.width / 2, -tempImage.height / 2);
+    ctx.rotate(-(rotate * Math.PI) / 180);
+    ctx.translate(-canvas.width / (2 * scale), -canvas.height / (2 * scale));
+
+    // Draw text overlay
+    if (textOverlay.textContent.trim() !== "") {
+      const style = textStyleInput.value;
+      const weight = style.includes("bold") ? "bold " : "";
+      const italic = style.includes("italic") ? "italic " : "";
+
+      ctx.font = `${italic}${weight}${(textSizeInput.value || 24)}px ${textFontInput.value}`;
+      ctx.fillStyle = textColorInput.value;
+      ctx.fillText(
+        textOverlay.textContent,
+        textX,
+        textY
+      );
+    }
+
+    // ✅ Export with chosen format
+    let mimeType = "image/png";
+    let extension = "png";
+    if (format === "jpg") { mimeType = "image/jpeg"; extension = "jpg"; }
+    if (format === "webp") { mimeType = "image/webp"; extension = "webp"; }
+
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL(mimeType, 0.95); // High quality
+    link.download = `Background Dropper-${scale}x.${extension}`;
+    link.click();
+  };
+});
+
+// ---------------- SOCIAL MEDIA SHARE ----------------
+function getImageShareURL() {
+  if (!processedImage.src || processedImage.src === "#") {
+    alert("Please process an image before sharing!");
+    return null;
+  }
+  return processedImage.src;
+}
+
+document.getElementById("share-facebook").addEventListener("click", () => {
+  const imgURL = getImageShareURL();
+  if (imgURL) {
+    const shareURL = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(imgURL)}`;
+    window.open(shareURL, "_blank");
+  }
+});
+
+document.getElementById("share-twitter").addEventListener("click", () => {
+  const imgURL = getImageShareURL();
+  if (imgURL) {
+    const shareURL = `https://twitter.com/intent/tweet?url=${encodeURIComponent(imgURL)}&text=Check out my edited image!`;
+    window.open(shareURL, "_blank");
+  }
+});
+
+document.getElementById("share-linkedin").addEventListener("click", () => {
+  const imgURL = getImageShareURL();
+  if (imgURL) {
+    const shareURL = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(imgURL)}`;
+    window.open(shareURL, "_blank");
+  }
+});
+
+document.getElementById("share-whatsapp").addEventListener("click", () => {
+  const imgURL = getImageShareURL();
+  if (imgURL) {
+    const shareURL = `https://api.whatsapp.com/send?text=Check out my edited image! ${encodeURIComponent(imgURL)}`;
+    window.open(shareURL, "_blank");
+  }
+});
+
+// ---------------- STOCK BACKGROUNDS ----------------
+document.querySelectorAll('.stock-item').forEach(item => {
+  item.addEventListener('click', () => {
+    if (processedImageBlob) {
+      applyCustomBackground(processedImageBlob, item.src);
+      resetEnhancements();
+      resetTextControls();
+    } else {
+      alert("Please upload and process an image first!");
+    }
+  });
+});
+
+// ---------------- DYNAMIC BACKGROUNDS ----------------
+document.querySelectorAll('.dynamic-item').forEach(item => {
+  item.addEventListener('click', () => {
+    if (!processedImageBlob) {
+      alert("Please upload and process an image first!");
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const foregroundImage = new Image();
+    foregroundImage.src = URL.createObjectURL(processedImageBlob);
+
+    foregroundImage.onload = () => {
+      canvas.width = foregroundImage.width;
+      canvas.height = foregroundImage.height;
+
+      // Choose background
+      const type = item.dataset.bg;
+      if (type === "gradient") {
+        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        gradient.addColorStop(0, "#4f46e5");
+        gradient.addColorStop(1, "#3b82f6");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      } else if (type === "moving") {
+        ctx.fillStyle = "black";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < 200; i++) {
+          ctx.fillStyle = `rgba(255,255,255,${Math.random()})`;
+          ctx.beginPath();
+          ctx.arc(Math.random()*canvas.width, Math.random()*canvas.height, Math.random()*2, 0, 2*Math.PI);
+          ctx.fill();
+        }
+      } else if (type === "pattern") {
+        ctx.fillStyle = "#f4f4f4";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = "#ccc";
+        for (let x = 0; x < canvas.width; x += 40) {
+          for (let y = 0; y < canvas.height; y += 40) {
+            ctx.strokeRect(x, y, 40, 40);
+          }
+        }
+      }
+
+      // Draw foreground
+      ctx.drawImage(foregroundImage, 0, 0);
+      processedImage.src = canvas.toDataURL();
+    };
+  });
+});
+
+// ---------------- BULK REMOVE BACKGROUNDS ----------------
+const bulkUploadInput = document.getElementById('bulk-upload-input');
+const bulkPreview = document.getElementById('bulk-preview');
+
+bulkUploadInput.addEventListener('change', async (event) => {
+  const files = Array.from(event.target.files);
+  bulkPreview.innerHTML = ""; // clear old previews
+
+  for (const file of files) {
+    if (!file.type.startsWith("image/")) continue;
+
+    const previewBox = document.createElement("div");
+    previewBox.className = "bulk-item";
+    previewBox.innerHTML = `<p>${file.name}</p><p>Processing...</p>`;
+    bulkPreview.appendChild(previewBox);
+
+    try {
+      const blob = await removeBackgroundBulk(file);
+      const img = document.createElement("img");
+      img.src = URL.createObjectURL(blob);
+      previewBox.innerHTML = `<p>${file.name}</p>`;
+      previewBox.appendChild(img);
+
+      const downloadBtn = document.createElement("button");
+      downloadBtn.textContent = "Download";
+      downloadBtn.addEventListener("click", () => {
+        const link = document.createElement("a");
+        link.href = img.src;
+        link.download = `processed-${file.name}`;
+        link.click();
+      });
+      previewBox.appendChild(downloadBtn);
+
+    } catch (err) {
+      previewBox.innerHTML = `<p>${file.name}</p><p style="color:red;">Error: ${err.message}</p>`;
+    }
+  }
+});
+
+async function removeBackgroundBulk(imageFile) {
+  const apiKey = 'N2ak6GE594k45fMi2g51D9Tf';
+  const url = 'https://api.remove.bg/v1.0/removebg';
+  const formData = new FormData();
+  formData.append('image_file', imageFile);
+  formData.append('size', 'auto');
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'X-Api-Key': apiKey },
+    body: formData
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed: ${response.status} - ${errorText}`);
+  }
+  return await response.blob();
+}
